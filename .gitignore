@@ -1,0 +1,33 @@
+# Binaries and object files
+*.exe
+*.obj
+*.o
+*.a
+*.lib
+*.dll
+*.pdb
+ozos-mesh
+test_security_hardening
+
+# Runtime ephemeral state
+.ozos_mesh_state/
+*.bf
+*.bin
+*.pub
+*.key
+*.tmp
+*.stop
+*.wav
+rx_frame.hex
+tx_relay.hex
+last_dispatch.txt
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# IDE & OS files
+.vscode/
+.idea/
+Thumbs.db
+*.log

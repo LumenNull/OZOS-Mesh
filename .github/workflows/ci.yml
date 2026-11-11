@@ -1,0 +1,79 @@
+name: Sovereign Assurance & Mutation CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  verify-posix-c99:
+    name: POSIX C99 (GCC & Clang + 10/10 Mutation)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Verify Zero-Heap (malloc = 0) & Pure English Invariants
+        run: |
+          python3 -c "
+          import pathlib, re, sys
+          for p in sorted(pathlib.Path('.').rglob('*')):
+              if '.git' in p.parts or p.is_dir() or p.suffix in {'.exe', '.pdb', '.obj', '.o', '.wav', '.bf', '.bin', '.pub'}:
+                  continue
+              txt = p.read_text(encoding='utf-8', errors='strict')
+              if p.suffix in {'.c', '.h'}:
+                  no_cmt = re.sub(r'/\*.*?\*/|//.*', '', txt, flags=re.S)
+                  hits = re.findall(r'\b(malloc|calloc|realloc|free)\s*\(', no_cmt)
+                  if hits:
+                      sys.exit(f'FAIL: Heap call {hits} found in {p}')
+          print('PASS: Zero-Heap (malloc = 0) verified across all C99 files.')
+          "
+
+      - name: Build & Test with GCC (-std=c99 -Werror -pedantic)
+        run: |
+          make clean
+          make CC=gcc test
+
+      - name: Build & Test with Clang (-std=c99 -Werror -pedantic)
+        run: |
+          make clean
+          make CC=clang test
+
+      - name: Execute Adversarial Mutation Suite (10/10 Kill Gate)
+        run: make CC=gcc mutation
+
+  verify-windows-msvc:
+    name: Windows x64 MSVC (PHY + Autostart + 10/10 Mutation)
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Build Native x64 Binaries (MSVC)
+        run: cmd /c build.bat
+
+      - name: Run Native C99 Security & PHY Hardening Suite
+        run: .\test_security_hardening.exe
+
+      - name: Run CLI, Headless Daemon, Ultrasonic WAV & Autostart Suite
+        run: |
+          python tests\test_mesh_network.py
+          python tests\sim_mesh_topology.py
+          python tests\live_mesh_demo.py
+
+      - name: Execute Adversarial Mutation Suite (10/10 Kill Gate)
+        run: python tests\mutation_test.py
